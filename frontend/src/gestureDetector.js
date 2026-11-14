@@ -85,7 +85,7 @@ export function classifyLeftHand(fingerStates) {
   const { thumb, index, middle, ring, pinky, count } = fingerStates;
 
   if (count === 0) {
-    return { root: null, gestureName: 'Rest (Kepalan/Diam)', fingersDesc: '0 Jari' };
+    return { root: 'REST', gestureName: 'Rest (Kepalan/Diam)', fingersDesc: '0 Jari (Mute)' };
   }
 
   // 1. 1 Jari Telunjuk -> C

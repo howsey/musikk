@@ -212,6 +212,8 @@ function updateCheatSheetHighlight(root, quality, isSharp) {
   document.querySelectorAll('#tab-left-content .gesture-item').forEach(item => {
     if (root && item.dataset.gesture === root) {
       item.classList.add('highlighted');
+    } else if (!root && item.dataset.gesture === 'REST') {
+      item.classList.add('highlighted');
     } else {
       item.classList.remove('highlighted');
     }
@@ -259,11 +261,13 @@ function onHandResults(results) {
     const classification = classifyLeftHand(fingerStates);
     const stableRoot = leftStabilizer.update(classification.root);
 
-    leftNoteDisplay.textContent = classification.root || '-';
+    leftNoteDisplay.textContent = (classification.root && classification.root !== 'REST') ? classification.root : (classification.root === 'REST' ? 'REST' : '-');
     leftGestureName.textContent = classification.gestureName;
     leftFingersDetail.textContent = classification.fingersDesc;
 
-    if (stableRoot !== null) {
+    if (stableRoot === 'REST') {
+      currentRoot = null;
+    } else if (stableRoot !== null) {
       currentRoot = stableRoot;
     }
   } else {
@@ -271,6 +275,7 @@ function onHandResults(results) {
     leftHandStatus.textContent = 'Mencari tangan...';
     updateFingerPills(leftFingersBar, null);
     leftStabilizer.reset();
+    currentRoot = null;
   }
 
   // --- 2. PROCESS RIGHT HAND (Chord Quality & Expression) ---
@@ -329,11 +334,13 @@ function onHandResults(results) {
     // Play chord with smooth crossfade
     audioEngine.playChord(chordInfo);
   } else {
-    currentChordNameElem.textContent = 'TIDAK ADA GESTUR';
-    currentChordNotesElem.innerHTML = `<span class="note-chip empty">Tunjukkan jari tangan kiri</span>`;
+    currentChordData = null;
+    currentChordNameElem.textContent = 'REST / DIAM (SUARA BERHENTI)';
+    currentChordNotesElem.innerHTML = `<span class="note-chip empty">Kepalkan tangan kiri (0 jari) untuk berhenti</span>`;
     soundIndicator.classList.remove('playing');
     updatePianoKeys([], '');
     updateCheatSheetHighlight(null, null, false);
+    audioEngine.stopChord();
   }
 }
 
