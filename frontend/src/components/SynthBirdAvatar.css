@@ -1,0 +1,207 @@
+/* Adapted from burung.css by AatreyuShau + 3D Studio Musical Reactivity */
+.bird-stage3d {
+  position: relative;
+  width: 145px;
+  height: 145px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 750px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.bird-stage3d .loader {
+  scale: var(--bird-scale, 0.62);
+  position: relative;
+  width: 200px;
+  height: 200px;
+  translate: 8px -18px;
+  transform-style: preserve-3d;
+  transform: rotateY(-12deg) rotateX(6deg);
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.bird-stage3d.is-grooving .loader {
+  transform: rotateY(-6deg) rotateX(3deg) translateZ(8px);
+}
+
+.bird-stage3d .loader svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.bird-stage3d .head {
+  translate: 27px -30px;
+  z-index: 4;
+  transform-origin: 45% 75%;
+  animation: bird-bob var(--bird-tempo, 1s) infinite ease-in;
+  transition: rotate 0.14s ease-out;
+  rotate: var(--bird-head-pitch, 0deg);
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
+}
+
+.bird-stage3d .bod {
+  translate: 0px 30px;
+  z-index: 3;
+  transform: translateZ(14px);
+  animation: bird-bob var(--bird-tempo, 1s) infinite ease-in-out;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.65));
+}
+
+.bird-stage3d .legr {
+  translate: 75px 135px;
+  z-index: 1;
+  animation: bird-rstep var(--bird-tempo, 1s) infinite ease-in;
+  animation-delay: calc(var(--bird-tempo, 1s) * 0.45);
+}
+
+.bird-stage3d .legl {
+  translate: 30px 155px;
+  z-index: 3;
+  animation: bird-lstep var(--bird-tempo, 1s) infinite ease-in;
+}
+
+/* REST / MUTE [0,0,0,0,0] or Reduced Motion State */
+.bird-stage3d.mode-rest .legl,
+.bird-stage3d.mode-rest .legr,
+.bird-stage3d.mode-standby .legl,
+.bird-stage3d.mode-standby .legr,
+.bird-stage3d.reduced-motion .legl,
+.bird-stage3d.reduced-motion .legr,
+.bird-stage3d.reduced-motion .bod,
+.bird-stage3d.reduced-motion .head,
+.bird-stage3d.reduced-motion #gnd,
+.bird-stage3d.reduced-motion .bird-harmonic-rings span {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bird-stage3d .legl,
+  .bird-stage3d .legr,
+  .bird-stage3d .bod,
+  .bird-stage3d .head,
+  .bird-stage3d #gnd,
+  .bird-stage3d .bird-harmonic-rings span {
+    animation: none !important;
+  }
+}
+
+.bird-stage3d.mode-rest .bird-eyes {
+  transform-origin: 265px 120px;
+  transform: scaleY(0.18);
+  opacity: 0.65;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.bird-stage3d.is-grooving .bird-eyes {
+  transform-origin: 265px 120px;
+  transform: scaleY(1);
+  transition: transform 0.2s ease;
+}
+
+.bird-stage3d #gnd {
+  translate: -140px 0;
+  rotate: 10deg;
+  z-index: -1;
+  filter: blur(0.4px) drop-shadow(1px 3px 5px #000000);
+  opacity: 0.35;
+  animation: bird-scroll calc(var(--bird-tempo, 1s) * 4.2) infinite linear;
+}
+
+.bird-stage3d.mode-rest #gnd,
+.bird-stage3d.mode-standby #gnd {
+  animation-play-state: paused;
+  opacity: 0.16;
+}
+
+/* Harmonic Pulse Rings under feet when playing a chord */
+.bird-harmonic-rings {
+  position: absolute;
+  left: 16px;
+  bottom: -24px;
+  width: 140px;
+  height: 44px;
+  pointer-events: none;
+  z-index: 0;
+  transform: rotateX(68deg);
+}
+
+.bird-harmonic-rings span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--bird-accent, #97affd);
+  opacity: 0;
+}
+
+.bird-stage3d.is-grooving .bird-harmonic-rings span:nth-child(1) {
+  animation: harmonic-ripple var(--bird-tempo, 1s) infinite ease-out;
+}
+
+.bird-stage3d.is-grooving .bird-harmonic-rings span:nth-child(2) {
+  animation: harmonic-ripple var(--bird-tempo, 1s) infinite ease-out;
+  animation-delay: calc(var(--bird-tempo, 1s) * 0.5);
+}
+
+@keyframes harmonic-ripple {
+  0% {
+    transform: scale(0.45);
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes bird-bob {
+  0%, 5%, 100% {
+    transform: translateY(0) rotate(3deg);
+  }
+  25%, 70% {
+    transform: translateY(5px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(0px) rotate(-3deg);
+  }
+}
+
+@keyframes bird-lstep {
+  0%, 100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  33% {
+    transform: translateY(-15px) translate(32px) rotate(35deg);
+  }
+  66% {
+    transform: translateY(0) translate(25px) rotate(-25deg);
+  }
+}
+
+@keyframes bird-rstep {
+  0%, 100% {
+    transform: translateY(0) translate(0px) rotate(-5deg);
+  }
+  33% {
+    transform: translateY(-10px) translate(30px) rotate(35deg);
+  }
+  66% {
+    transform: translateY(0) translate(20px) rotate(-25deg);
+  }
+}
+
+@keyframes bird-scroll {
+  0% {
+    transform: translateY(25px) translate(50px);
+    opacity: 0;
+  }
+  33%, 66% {
+    opacity: 0.35;
+  }
+  to {
+    transform: translateY(-50px) translate(-100px);
+    opacity: 0;
+  }
+}
