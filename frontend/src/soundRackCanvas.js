@@ -1,47 +1,24 @@
-// Precision Studio Canvas Renderers for AETHER // MK-II
-// Styled in Matte Midnight Hardware Palette (#97affd Periwinkle, #ff9f43 Warm Amber, #05070b OLED)
+// Canvas renderers: live waveform, ADSR envelope, low-pass filter response.
 
-export const PRESET_METADATA = {
-  ambient_pad: {
-    code: '01',
-    shortName: 'SILK PAD',
-    name: 'Ambient Silk Pad',
-    tag: 'FatSawtooth · Warm Sustain',
-    env: { attack: 0.15, decay: 0.4, sustain: 0.88, release: 2.2 },
-    defaultCutoff: 2800,
-    defaultReverb: 0.42
-  },
-  electric_piano: {
-    code: '02',
-    shortName: 'RHODES EP',
-    name: 'Neo-Soul Rhodes',
-    tag: 'FatTriangle · Bell Chime',
-    env: { attack: 0.04, decay: 1.2, sustain: 0.5, release: 1.4 },
-    defaultCutoff: 4500,
-    defaultReverb: 0.25
-  },
-  cyber_brass: {
-    code: '03',
-    shortName: 'FM BRASS',
-    name: 'Cyberpunk Brass',
-    tag: 'FMSawtooth · Analog Punch',
-    env: { attack: 0.08, decay: 0.6, sustain: 0.75, release: 1.2 },
-    defaultCutoff: 3800,
-    defaultReverb: 0.3
-  },
-  celestial_bells: {
-    code: '04',
-    shortName: 'PLUCK BELL',
-    name: 'Celestial Pluck',
-    tag: 'Sine · Stereo Delay',
-    env: { attack: 0.02, decay: 2.0, sustain: 0.4, release: 2.5 },
-    defaultCutoff: 6000,
-    defaultReverb: 0.55
+function prepare(canvas) {
+  if (!canvas) return null;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return null;
+  const w = Math.round(rect.width * dpr);
+  const h = Math.round(rect.height * dpr);
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
   }
-};
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, rect.width, rect.height);
+  return { ctx, w: rect.width, h: rect.height };
+}
 
-function drawSubtleGrid(ctx, w, h, cols = 8, rows = 4) {
-  ctx.strokeStyle = 'rgba(151, 175, 253, 0.06)';
+function grid(ctx, w, h, cols = 8, rows = 4) {
+  ctx.strokeStyle = 'rgba(133, 146, 171, 0.12)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let i = 1; i < cols; i++) {
@@ -57,206 +34,96 @@ function drawSubtleGrid(ctx, w, h, cols = 8, rows = 4) {
   ctx.stroke();
 }
 
-export function drawOledWaveform(canvas, waveformData, isPlaying) {
-  if (!canvas) return;
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0) return;
-
-  if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
-  }
-
-  const ctx = canvas.getContext('2d');
-  ctx.save();
-  ctx.scale(dpr, dpr);
-
-  const w = rect.width;
-  const h = rect.height;
-  ctx.clearRect(0, 0, w, h);
-
-  const midY = h * 0.5;
-
-  // Baseline
-  ctx.strokeStyle = 'rgba(47, 58, 80, 0.5)';
+export function drawWaveformLine(canvas, data, isPlaying) {
+  const c = prepare(canvas);
+  if (!c) return;
+  const { ctx, w, h } = c;
+  const mid = h / 2;
+  ctx.strokeStyle = 'rgba(133, 146, 171, 0.35)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, midY);
-  ctx.lineTo(w, midY);
+  ctx.moveTo(0, mid);
+  ctx.lineTo(w, mid);
   ctx.stroke();
-
-  if (!waveformData || !isPlaying) {
-    ctx.restore();
-    return;
-  }
+  if (!data || !isPlaying) return;
 
   ctx.beginPath();
-  const slice = w / waveformData.length;
-  let x = 0;
-  for (let i = 0; i < waveformData.length; i++) {
-    const v = waveformData[i];
-    const y = midY + v * (h * 0.42);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-    x += slice;
+  const slice = w / data.length;
+  for (let i = 0; i < data.length; i++) {
+    const y = mid + data[i] * h * 0.42;
+    if (i === 0) ctx.moveTo(0, y);
+    else ctx.lineTo(i * slice, y);
   }
   ctx.strokeStyle = '#97affd';
   ctx.lineWidth = 1.8;
   ctx.stroke();
-  ctx.restore();
 }
 
 export function drawADSRGraph(canvas, env) {
-  if (!canvas) return;
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0) return;
-
-  if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
-  }
-
-  const ctx = canvas.getContext('2d');
-  ctx.save();
-  ctx.scale(dpr, dpr);
-
-  const w = rect.width;
-  const h = rect.height;
+  const c = prepare(canvas);
+  if (!c || !env) return;
+  const { ctx, w, h } = c;
+  grid(ctx, w, h);
   const padX = 14;
-  const padTop = 18;
+  const padTop = 16;
   const padBot = 14;
   const innerW = w - padX * 2;
   const innerH = h - padTop - padBot;
-
-  ctx.clearRect(0, 0, w, h);
-  drawSubtleGrid(ctx, w, h, 8, 4);
-
   const atkX = padX + Math.max(0.06, Math.min(0.24, env.attack * 0.9)) * innerW;
   const decX = atkX + Math.max(0.14, Math.min(0.28, env.decay * 0.16)) * innerW;
   const susEndX = Math.min(w - padX - innerW * 0.24, decX + innerW * 0.28);
   const relEndX = w - padX;
-
   const baseY = h - padBot;
-  const peakY = padTop;
   const susY = baseY - env.sustain * innerH;
 
-  const grad = ctx.createLinearGradient(0, peakY, 0, baseY);
-  grad.addColorStop(0, 'rgba(151, 175, 253, 0.22)');
-  grad.addColorStop(1, 'rgba(151, 175, 253, 0.01)');
-
-  ctx.beginPath();
-  ctx.moveTo(padX, baseY);
-  ctx.lineTo(atkX, peakY);
-  ctx.quadraticCurveTo(atkX + (decX - atkX) * 0.35, susY, decX, susY);
-  ctx.lineTo(susEndX, susY);
-  ctx.quadraticCurveTo(susEndX + (relEndX - susEndX) * 0.45, susY, relEndX, baseY);
+  const path = () => {
+    ctx.beginPath();
+    ctx.moveTo(padX, baseY);
+    ctx.lineTo(atkX, padTop);
+    ctx.quadraticCurveTo(atkX + (decX - atkX) * 0.35, susY, decX, susY);
+    ctx.lineTo(susEndX, susY);
+    ctx.quadraticCurveTo(susEndX + (relEndX - susEndX) * 0.45, susY, relEndX, baseY);
+  };
+  path();
   ctx.closePath();
-  ctx.fillStyle = grad;
+  ctx.fillStyle = 'rgba(151, 175, 253, 0.14)';
   ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(padX, baseY);
-  ctx.lineTo(atkX, peakY);
-  ctx.quadraticCurveTo(atkX + (decX - atkX) * 0.35, susY, decX, susY);
-  ctx.lineTo(susEndX, susY);
-  ctx.quadraticCurveTo(susEndX + (relEndX - susEndX) * 0.45, susY, relEndX, baseY);
+  path();
   ctx.strokeStyle = '#97affd';
   ctx.lineWidth = 2;
   ctx.stroke();
-
-  const points = [
-    [padX, baseY],
-    [atkX, peakY],
-    [decX, susY],
-    [susEndX, susY],
-    [relEndX, baseY]
-  ];
-  for (const [px, py] of points) {
-    ctx.beginPath();
-    ctx.arc(px, py, 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#05070b';
-    ctx.fill();
-    ctx.strokeStyle = '#97affd';
-    ctx.lineWidth = 1.8;
-    ctx.stroke();
-  }
-
-  ctx.restore();
 }
 
 export function drawFilterGraph(canvas, cutoffHz = 3200) {
-  if (!canvas) return;
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0) return;
-
-  if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
-  }
-
-  const ctx = canvas.getContext('2d');
-  ctx.save();
-  ctx.scale(dpr, dpr);
-
-  const w = rect.width;
-  const h = rect.height;
-  const padTop = 26;
-  const padBot = 14;
-  const baseY = h - padBot;
+  const c = prepare(canvas);
+  if (!c) return;
+  const { ctx, w, h } = c;
+  grid(ctx, w, h);
+  const padTop = 16;
+  const baseY = h - 14;
   const passY = padTop + (baseY - padTop) * 0.22;
-
-  ctx.clearRect(0, 0, w, h);
-  drawSubtleGrid(ctx, w, h, 8, 4);
-
   const minLog = Math.log10(20);
   const maxLog = Math.log10(20000);
-  const freqToX = (f) => ((Math.log10(Math.max(20, Math.min(20000, f))) - minLog) / (maxLog - minLog)) * w;
-  const cutoffX = freqToX(cutoffHz);
+  const cutoffX = ((Math.log10(cutoffHz) - minLog) / (maxLog - minLog)) * w;
 
-  const curvePoints = [];
-  const steps = 80;
-  for (let i = 0; i <= steps; i++) {
-    const x = (i / steps) * w;
-    const freq = Math.pow(10, minLog + (i / steps) * (maxLog - minLog));
-    const ratio = freq / Math.max(100, cutoffHz);
-    const mag = 1 / Math.sqrt(1 + Math.pow(ratio, 4));
-    const y = baseY - mag * (baseY - passY);
-    curvePoints.push([x, y]);
+  const pts = [];
+  for (let i = 0; i <= 80; i++) {
+    const freq = Math.pow(10, minLog + (i / 80) * (maxLog - minLog));
+    const mag = 1 / Math.sqrt(1 + Math.pow(freq / Math.max(100, cutoffHz), 4));
+    pts.push([(i / 80) * w, baseY - mag * (baseY - passY)]);
   }
-
-  const grad = ctx.createLinearGradient(0, passY, 0, baseY);
-  grad.addColorStop(0, 'rgba(255, 159, 67, 0.22)');
-  grad.addColorStop(1, 'rgba(255, 159, 67, 0.01)');
-
   ctx.beginPath();
   ctx.moveTo(0, baseY);
-  for (const [x, y] of curvePoints) ctx.lineTo(x, y);
+  pts.forEach(([x, y]) => ctx.lineTo(x, y));
   ctx.lineTo(w, baseY);
   ctx.closePath();
-  ctx.fillStyle = grad;
+  ctx.fillStyle = 'rgba(255, 159, 67, 0.14)';
   ctx.fill();
-
   ctx.beginPath();
-  for (let i = 0; i < curvePoints.length; i++) {
-    const [x, y] = curvePoints[i];
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
+  pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
   ctx.strokeStyle = '#ff9f43';
   ctx.lineWidth = 2;
   ctx.stroke();
-
-  ctx.setLineDash([3, 3]);
-  ctx.strokeStyle = 'rgba(255, 159, 67, 0.45)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cutoffX, padTop);
-  ctx.lineTo(cutoffX, baseY);
-  ctx.stroke();
-  ctx.setLineDash([]);
 
   const cutoffY = baseY - (1 / Math.sqrt(2)) * (baseY - passY);
   ctx.beginPath();
@@ -266,6 +133,4 @@ export function drawFilterGraph(canvas, cutoffHz = 3200) {
   ctx.strokeStyle = '#f4f1ea';
   ctx.lineWidth = 1.5;
   ctx.stroke();
-
-  ctx.restore();
 }

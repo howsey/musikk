@@ -1,8 +1,12 @@
 import React, { useRef } from 'react';
 
 /**
- * Tactile Studio Hardware Rotary Encoder Knob (SVG)
- * Supports vertical mouse drag, scroll wheel, and double-click reset.
+ * Accessible Tactile Rotary Knob (WCAG 2.1.1 Keyboard + Pointer + Wheel)
+ * - ArrowUp / ArrowRight: +1 step
+ * - ArrowDown / ArrowLeft: -1 step
+ * - PageUp / PageDown: +/- 10% of range
+ * - Home / End: min / max
+ * - Double-click: reset to defaultValue
  */
 export default function RotaryKnob({
   label,
@@ -16,9 +20,8 @@ export default function RotaryKnob({
   onChange
 }) {
   const dragStartRef = useRef(null);
-
-  const normalized = Math.max(0, Math.min(1, (value - min) / (max - min)));
-  // Sweep from -135 deg to +135 deg (total 270 deg)
+  const range = max - min;
+  const normalized = Math.max(0, Math.min(1, (value - min) / (range || 1)));
   const angleDeg = -135 + normalized * 270;
 
   const clampAndEmit = (rawVal) => {
@@ -29,12 +32,12 @@ export default function RotaryKnob({
 
   const handlePointerDown = (e) => {
     e.preventDefault();
+    e.currentTarget.focus();
     dragStartRef.current = { startY: e.clientY, startVal: value };
 
     const handlePointerMove = (moveEvent) => {
       if (!dragStartRef.current) return;
       const dy = dragStartRef.current.startY - moveEvent.clientY;
-      const range = max - min;
       const delta = (dy / 130) * range;
       clampAndEmit(dragStartRef.current.startVal + delta);
     };
@@ -52,8 +55,29 @@ export default function RotaryKnob({
   const handleWheel = (e) => {
     e.preventDefault();
     const dir = e.deltaY < 0 ? 1 : -1;
-    const range = max - min;
     clampAndEmit(value + dir * Math.max(step, range * 0.04));
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      clampAndEmit(value + step);
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      clampAndEmit(value - step);
+    } else if (e.key === 'PageUp') {
+      e.preventDefault();
+      clampAndEmit(value + range * 0.1);
+    } else if (e.key === 'PageDown') {
+      e.preventDefault();
+      clampAndEmit(value - range * 0.1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      clampAndEmit(min);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      clampAndEmit(max);
+    }
   };
 
   const handleDoubleClick = () => {
@@ -62,7 +86,6 @@ export default function RotaryKnob({
     }
   };
 
-  // Generate 19 radial degree ticks around the encoder
   const ticks = Array.from({ length: 19 }, (_, idx) => {
     const tNorm = idx / 18;
     const tAngle = (-135 + tNorm * 270) * (Math.PI / 180) - Math.PI / 2;
@@ -81,16 +104,17 @@ export default function RotaryKnob({
       className="hw-knob-unit"
       onPointerDown={handlePointerDown}
       onWheel={handleWheel}
+      onKeyDown={handleKeyDown}
       onDoubleClick={handleDoubleClick}
       role="slider"
       aria-label={label}
       aria-valuemin={min}
       aria-valuemax={max}
       aria-valuenow={value}
+      aria-valuetext={displayValue}
       tabIndex={0}
     >
-      <svg className="hw-knob-svg" viewBox="0 0 64 64">
-        {/* Outer degree ticks */}
+      <svg className="hw-knob-svg" viewBox="0 0 64 64" aria-hidden="true">
         {ticks.map((t, i) => (
           <line
             key={i}
@@ -103,13 +127,9 @@ export default function RotaryKnob({
             strokeLinecap="round"
           />
         ))}
-
-        {/* Knob physical base shadow & cap */}
         <circle cx="32" cy="33.5" r="18" fill="#05070b" />
-        <circle cx="32" cy="32" r="18" fill="#131724" stroke="#2f3a50" strokeWidth="1.6" />
-        <circle cx="32" cy="32" r="14.5" fill="#191e2e" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-
-        {/* Rotating pointer indicator */}
+        <circle cx="32" cy="32" r="18" fill="#131724" stroke="#5d6e94" strokeWidth="1.6" />
+        <circle cx="32" cy="32" r="14.5" fill="#191e2e" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
         <g transform={`rotate(${angleDeg} 32 32)`}>
           <line
             x1="32"
@@ -120,7 +140,7 @@ export default function RotaryKnob({
             strokeWidth="2.2"
             strokeLinecap="round"
           />
-          <circle cx="32" cy="19" r="1.4" fill={accentColor} />
+          <circle cx="32" cy="19" r="1.5" fill={accentColor} />
         </g>
       </svg>
       <div className="hw-knob-label">{label}</div>

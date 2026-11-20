@@ -22,7 +22,8 @@ export default function SynthBirdAvatar({
   isSharp = false,
   cutoffNormalized = 0.65,
   octave = 3,
-  scale = 0.62
+  scale = 0.62,
+  reducedMotion = false
 }) {
   const isPlaying = mode === 'playing' && Boolean(rootNote);
   const isRest = mode === 'rest';
@@ -46,7 +47,9 @@ export default function SynthBirdAvatar({
 
   return (
     <div
-      className={`bird-stage3d mode-${mode} ${isPlaying ? 'is-grooving' : ''}`}
+      className={`bird-stage3d mode-${mode} ${isPlaying ? 'is-grooving' : ''} ${
+        reducedMotion ? 'reduced-motion' : ''
+      }`}
       style={{
         '--bird-scale': scale,
         '--bird-tempo': `${stepDurationSec}s`,

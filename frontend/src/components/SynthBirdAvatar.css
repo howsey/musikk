@@ -63,12 +63,29 @@
   animation: bird-lstep var(--bird-tempo, 1s) infinite ease-in;
 }
 
-/* REST / MUTE [0,0,0,0,0] State: Legs parked, slow breathing, half-closed eyes */
+/* REST / MUTE [0,0,0,0,0] or Reduced Motion State */
 .bird-stage3d.mode-rest .legl,
 .bird-stage3d.mode-rest .legr,
 .bird-stage3d.mode-standby .legl,
-.bird-stage3d.mode-standby .legr {
-  animation-play-state: paused;
+.bird-stage3d.mode-standby .legr,
+.bird-stage3d.reduced-motion .legl,
+.bird-stage3d.reduced-motion .legr,
+.bird-stage3d.reduced-motion .bod,
+.bird-stage3d.reduced-motion .head,
+.bird-stage3d.reduced-motion #gnd,
+.bird-stage3d.reduced-motion .bird-harmonic-rings span {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bird-stage3d .legl,
+  .bird-stage3d .legr,
+  .bird-stage3d .bod,
+  .bird-stage3d .head,
+  .bird-stage3d #gnd,
+  .bird-stage3d .bird-harmonic-rings span {
+    animation: none !important;
+  }
 }
 
 .bird-stage3d.mode-rest .bird-eyes {
