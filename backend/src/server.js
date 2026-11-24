@@ -1,8 +1,12 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { SYNTH_PRESETS } from './presets.js';
+import authRoutes from './routes/auth.js';
+import presetsRoutes from './routes/presets.js';
+import trackingRoutes, { startSessionExpirationSweeper } from './routes/tracking.js';
+import { generalApiLimiter, trackingRateLimiter } from './middleware/rateLimit.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,8 +14,21 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Security HTTP headers (CSP dimatikan agar asset static MediaPipe/WASM frontend tidak terblokir)
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false
+  })
+);
+
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
+// Mendukung navigator.sendBeacon dengan Content-Type: text/plain saat tab ditutup
+app.use(express.text({ type: 'text/plain', limit: '10kb' }));
+
+// Rate limit umum untuk seluruh API
+app.use('/api', generalApiLimiter);
 
 // API Health Check
 app.get('/api/health', (req, res) => {
@@ -23,12 +40,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API Synth Presets
-app.get('/api/presets', (req, res) => {
-  res.json({
-    presets: SYNTH_PRESETS
-  });
-});
+// Auth, Custom Presets & User Access/Session Tracking APIs (Supabase-backed)
+app.use('/api/auth', authRoutes);
+app.use('/api/presets', presetsRoutes);
+app.use('/api/tracking', trackingRateLimiter, trackingRoutes);
 
 // API Gesture & Chord Theory Reference
 app.get('/api/chords', (req, res) => {
@@ -74,5 +89,6 @@ app.get('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
+  // Jalankan pengecekan otomatis untuk sesi tidak aktif (Expired)
+  startSessionExpirationSweeper();
 });
-
